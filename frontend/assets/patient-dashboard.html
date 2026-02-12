@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - Sentini Hospital</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="text-decoration: none;">
+                <div class="logo-section">
+                    <div class="logo-plus">+</div>
+                    <h2 style="font-weight: 800; color: var(--text-main);">My Dashboard</h2>
+                </div>
+            </a>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="patientIdDisplay" class="patient-id-tag">Patient ID</span>
+                <button onclick="App.logout()" class="btn-outline"
+                    style="padding: 0.5rem 1.2rem; border-radius: 12px; font-weight: 700;">Logout</button>
+            </div>
+        </header>
+
+        <main class="glass-pane" style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+                <div>
+                    <h3 style="font-weight: 800; font-size: 1.5rem;">Appointment History</h3>
+                    <p style="color: var(--text-sub); font-weight: 500; margin-top: 0.2rem;">Track and manage your
+                        medical consultations</p>
+                </div>
+                <a href="booking.html" class="btn btn-primary" style="padding: 0.8rem 1.8rem;">Book New Appointment</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Doctor & Specialization</th>
+                            <th>Consultation Type</th>
+                            <th>Date & Time</th>
+                            <th>Current Status</th>
+                            <th>Booking Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientAppTable">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const user = App.getUser();
+            if (!user) {
+                window.location.href = 'patient-login.html';
+                return;
+            }
+            document.getElementById('patientIdDisplay').textContent = `ID: ${user.id}`;
+            loadPatientAppointments();
+        });
+
+        async function loadPatientAppointments() {
+            const resp = await fetch(`${App.getApiUrl()}/appointments/patient`, {
+                headers: { 'Authorization': `Bearer ${App.getToken()}` }
+            });
+            const data = await resp.json();
+            const tbody = document.getElementById('patientAppTable');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sub); padding: 5rem; font-weight: 500;">No appointments found in your history.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(app => {
+                const doctorName = app.doctorName === 'TBD' ? 'TBD' : `Dr. ${app.doctorName}`;
+                const department = app.department || 'General';
+                const date = app.displayDate || 'Pending';
+                const time = app.displayTime || 'Flexible';
+
+                return `
+                <tr>
+                    <td data-label="Doctor & Specialization" style="padding-left: 1.5rem;">
+                        <div style="font-weight: 700; color: var(--text-main); font-size: 1rem;">${department}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: 600;">${doctorName}</div>
+                    </td>
+                    <td data-label="Consultation Type" style="font-weight: 500; color: var(--text-sub); font-size: 0.9rem;">In-Hospital Visit</td>
+                    <td data-label="Date & Time" style="font-weight: 700; color: var(--text-main); font-size: 1rem;">
+                        ${date}<br>
+                        <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-sub);">${time}</span>
+                    </td>
+                    <td data-label="Current Status"><span class="status-badge status-${app.status}">${app.status}</span></td>
+                    <td data-label="Booking Date" style="font-size: 0.85rem; color: var(--text-sub); font-weight: 500;">${new Date(app.createdAt).toLocaleDateString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                })}</td>
+                </tr>
+            `}).join('');
+        }
+
+        // Real-time update integration
+        window.loadPatientAppointments = loadPatientAppointments;
+    </script>
+</body>
+
+</html>

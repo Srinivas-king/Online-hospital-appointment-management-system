@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Sentini - Sentini Hospital</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body style="min-height: 100vh; background: var(--bg-main);">
+    <div class="container">
+        <header>
+            <a href="index.html" style="text-decoration: none;">
+                <div class="logo-section">
+                    <div class="logo-plus">+</div>
+                    <h2 style="font-weight: 800; color: var(--text-main);">Sentini Health</h2>
+                </div>
+            </a>
+            <div class="nav-right" style="display: flex; align-items: center; gap: 1rem;">
+                <a href="patient-login.html" id="headerPatientLogin"
+                    style="color: var(--primary-blue); text-decoration: none; font-size: var(--fs-xs); font-weight: 700; background: rgba(59, 130, 246, 0.1); padding: 0.5rem 1rem; border-radius: 8px;">Patient
+                    Login</a>
+                <a href="admin-login.html"
+                    style="color: var(--text-sub); text-decoration: none; font-size: var(--fs-xs); font-weight: 600;">Admin
+                    Access</a>
+            </div>
+        </header>
+
+        <div class="auth-wrapper">
+            <div class="auth-container" style="margin: 0;">
+                <div class="text-center" style="margin-bottom: 2.5rem;">
+                    <div class="logo-plus" style="margin: 0 auto 1.5rem;">+</div>
+                    <h2>Create Account</h2>
+                    <p style="color: var(--text-sub); margin-top: 0.5rem; font-weight: 500;">Join our advanced medical
+                        network</p>
+                </div>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="regName" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="regEmail" placeholder="name@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full mt-1">Register Now</button>
+                </form>
+                <p class="text-center mt-1" style="font-size: var(--fs-sm); color: var(--text-sub); font-weight: 500;">
+                    Already have an account? <a href="patient-login.html" id="signInLink"
+                        style="color: var(--primary-blue); text-decoration: none; font-weight: 700;">Sign In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect');
+
+        // Handle header login link
+        const signLink = document.getElementById('signInLink');
+        const headerLogin = document.getElementById('headerPatientLogin');
+        if (redirect) {
+            if (signLink) signLink.href = `patient-login.html?redirect=${redirect}`;
+            if (headerLogin) headerLogin.href = `patient-login.html?redirect=${redirect}`;
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                name: document.getElementById('regName').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value,
+                role: 'patient'
+            };
+
+            const resp = await fetch(`${App.getApiUrl()}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (resp.ok) {
+                App.notify('Registration successful! Please login.', 'success');
+                setTimeout(() => {
+                    window.location.href = redirect ? `patient-login.html?redirect=${redirect}` : 'patient-login.html';
+                }, 1500);
+            } else {
+                const data = await resp.json();
+                App.notify(data.message || 'Registration failed', 'error');
+            }
+        });
+    </script>
+</body>
+
+</html>

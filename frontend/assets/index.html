@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentini Hospital - Advanced Medical Care</title>
+    <link rel="stylesheet" href="style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-section">
+                <div class="logo-plus">+</div>
+                <div>
+                    <h2 style="font-weight: 800; letter-spacing: -1px; color: var(--text-main);">
+                        Sentini Hospital</h2>
+                    <p style="font-size: var(--fs-sm); color: var(--text-sub); font-weight: 500;">Appointment Management
+                        System</p>
+                </div>
+            </div>
+            <div class="nav-right">
+                <span id="currentDate"></span>
+                <span id="patientIdDisplay" class="patient-id-tag">Patient ID</span>
+                <a href="patient-login.html" id="headerPatientLogin"
+                    style="color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; font-weight: 700; background: rgba(59, 130, 246, 0.1); padding: 0.5rem 1rem; border-radius: 8px;">Patient
+                    Login</a>
+                <a href="admin-login.html"
+                    style="color: var(--text-sub); text-decoration: none; font-size: 0.9rem; font-weight: 600; margin-left: 1rem;">Admin
+                    Access</a>
+                <div id="userAvatar"
+                    style="width: 40px; height: 40px; background: #e2e8f0; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: var(--text-main); box-shadow: var(--shadow-soft); margin-left: 1rem;">
+                    👤</div>
+            </div>
+        </header>
+
+        <main class="hero-section">
+            <!-- Left Stats -->
+            <div class="stats-grid left-stats">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span style="color: #ef4444; font-size: 1rem;">❤</span> Heart Rate
+                    </div>
+                    <div class="stat-value">75 <span class="stat-unit">bpm</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span style="color: #3b82f6; font-size: 1rem;">💧</span> Blood Pressure
+                    </div>
+                    <div class="stat-value">120/80 <span class="stat-unit">mmHg</span></div>
+                </div>
+            </div>
+
+            <!-- Center Heart -->
+            <div class="heart-container">
+                <img src="heart.png" alt="Realistic Anatomical Heart" class="heart-image">
+            </div>
+
+            <!-- Middle-Right Stats -->
+            <div class="stats-grid right-stats">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span style="color: #10b981; font-size: 1rem;">⚡</span> Blood Glucose
+                    </div>
+                    <div class="stat-value">88 <span class="stat-unit">mmol/L</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span style="color: #f59e0b; font-size: 1rem;">🔥</span> Calories
+                    </div>
+                    <div class="stat-value">1,575 <span class="stat-unit">kCal</span></div>
+                </div>
+            </div>
+
+            <!-- Right Action Panel -->
+            <aside class="action-panel" id="actionPanel">
+                <div id="loggedOutActions" class="w-full">
+                    <h3 class="mb-1" style="font-weight: 800;">Get Started</h3>
+                    <a href="patient-register.html" class="btn btn-primary mb-1">Register Now</a>
+                    <a href="patient-login.html" class="btn btn-outline mb-1">I Have an Account</a>
+                    <a href="booking.html" class="btn btn-outline mb-2">Book Appointment</a>
+                </div>
+
+                <div id="loggedInActions" class="w-full" style="display: none;">
+                    <h3 id="welcomeUser" class="mb-1" style="font-weight: 800;">Welcome!</h3>
+                    <a href="patient-dashboard.html" class="btn btn-primary mb-1">My Dashboard</a>
+                    <a href="booking.html" class="btn btn-outline mb-1">Book Appointment</a>
+                    <button onclick="App.logout()" class="btn btn-outline mb-2">Logout Session</button>
+                </div>
+
+                <div class="insights-box">
+                    <h4>Hospital Insights</h4>
+                    <p>
+                        Advanced biometric monitoring enabled for Sentini Hospital. Real-time updates on your health
+                        status and appointment approvals.
+                    </p>
+                </div>
+            </aside>
+        </main>
+
+        <!-- About the Hospital Section -->
+        <section class="about-section">
+            <div class="section-title">
+                <h2>About Sentini Hospital</h2>
+                <p class="section-desc">
+                    Sentini Hospital is a multi-specialty healthcare institution committed to delivering
+                    high-quality, patient-centered medical services. With decades of experience and
+                    advanced medical infrastructure, we focus on innovation, compassion, and clinical
+                    excellence to improve lives every day.
+                </p>
+
+            </div>
+
+            <!-- Interactive Timeline -->
+            <div class="timeline-container">
+                <div class="timeline-item">
+                    <span class="timeline-year">1995</span>
+                    <h4 style="color: var(--text-main);">Founded</h4>
+                    <p>Our legacy began with a commitment to
+                        providing advanced medical care with a compassionate touch, setting a new standard for
+                        healthcare in the region.</p>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-year">2010</span>
+                    <h4 style="color: var(--text-main);">Growth</h4>
+                    <p>Expanding our infrastructure and
+                        specialization, we grew into a multi-specialty hub with state-of-the-art diagnostic and surgical
+                        facilities.</p>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-year">2024</span>
+                    <h4 style="color: var(--text-main);">Achievements</h4>
+                    <p>Recognized as a center of clinical
+                        excellence,
+                        pioneering innovative medical procedures and achieving top-tier patient safety ratings.</p>
+                </div>
+            </div>
+
+            <p
+                style="text-align: center; margin-top: 4rem; font-weight: 500; font-size: var(--fs-base); line-height: 1.7;">
+                Our growing infrastructure and dedicated team of experts are a testament to the trust millions of
+                patients place in us for their well-being.
+            </p>
+
+            <!-- Stats Counters -->
+            <div class="stats-counter-grid">
+                <div class="counter-card">
+                    <span class="counter-number" data-target="250">250</span>
+                    <span class="counter-label">Total Beds</span>
+                </div>
+                <div class="counter-card">
+                    <span class="counter-number" data-target="120">120</span>
+                    <span class="counter-label">Expert Doctors</span>
+                </div>
+                <div class="counter-card">
+                    <span class="counter-number" data-target="400">400</span>
+                    <span class="counter-label">Hospital Staff</span>
+                </div>
+                <div class="counter-card">
+                    <span class="counter-number" data-target="1000000">10000+</span>
+                    <span class="counter-label">Patients Served</span>
+                </div>
+            </div>
+
+            <!-- Department Explorer -->
+            <div class="department-explorer">
+                <div class="section-title">
+                    <h3 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main);">Our Departments</h3>
+                    <p>We offer a wide range of specialized medical services powered by world-class technology and
+                        senior medical consultants, ensuring expert care and modern facilities for all our patients.</p>
+                </div>
+                <div class="dept-grid">
+                    <div class="dept-card">
+                        <span class="dept-icon">❤️</span>
+                        <h4>Cardiology</h4>
+                        <p>Heart and vascular care.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">🧠</span>
+                        <h4>Neurology</h4>
+                        <p>Brain and nervous system.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">🦴</span>
+                        <h4>Orthopedics</h4>
+                        <p>Bone and joint specialists.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">👶</span>
+                        <h4>Pediatrics</h4>
+                        <p>Specialized childcare.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">🩺</span>
+                        <h4>General Medicine</h4>
+                        <p>Comprehensive health care.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">✨</span>
+                        <h4>Dermatology</h4>
+                        <p>Skin and aesthetic health.</p>
+                    </div>
+                    <div class="dept-card">
+                        <span class="dept-icon">👂</span>
+                        <h4>ENT</h4>
+                        <p>Ear, nose, and throat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Journey Flow -->
+            <div class="journey-flow-section">
+                <div class="section-title">
+                    <h3 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main);">Patient Journey Flow
+                    </h3>
+                    <p>Our streamlined step-by-step healthcare process ensures that from your first registration to your
+                        final recovery follow-up, your care is integrated, seamless, and effortless.</p>
+                </div>
+                <div class="journey-flow">
+                    <div class="journey-step">
+                        <div class="step-icon">📝</div>
+                        <span class="step-text">Register</span>
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="journey-step">
+                        <div class="step-icon">📅</div>
+                        <span class="step-text">Appointment</span>
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="journey-step">
+                        <div class="step-icon">💬</div>
+                        <span class="step-text">Consultation</span>
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="journey-step">
+                        <div class="step-icon">🔬</div>
+                        <span class="step-text">Diagnosis</span>
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="journey-step">
+                        <div class="step-icon">💊</div>
+                        <span class="step-text">Treatment</span>
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="journey-step">
+                        <div class="step-icon">🔄</div>
+                        <span class="step-text">Follow-up</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Stats Counter Logic -->
+    <script>
+        const counters = document.querySelectorAll('.counter-number');
+        const speed = 200;
+
+        const startCounters = () => {
+            counters.forEach(counter => {
+                const updateCount = () => {
+                    const target = +counter.getAttribute('data-target');
+                    const count = +counter.innerText.replace('+', '').replace('M', '');
+                    const inc = target / speed;
+
+                    if (count < target) {
+                        const nextVal = Math.ceil(count + inc);
+                        if (target >= 1000000) {
+                            counter.innerText = (nextVal / 1000000).toFixed(0) + 'M+';
+                        } else {
+                            counter.innerText = nextVal + '+';
+                        }
+                        setTimeout(updateCount, 1);
+                    } else {
+                        if (target >= 1000000) {
+                            counter.innerText = '1M+';
+                        } else {
+                            counter.innerText = target + '+';
+                        }
+                    }
+                };
+                updateCount();
+            });
+        };
+
+        // Trigger counters when section is in view
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                startCounters();
+                observer.disconnect();
+            }
+        }, { threshold: 0.5 });
+
+        observer.observe(document.querySelector('.about-section'));
+    </script>
+
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        // Auth UI Updates
+        window.addEventListener('load', () => {
+            const user = App.getUser();
+            const loggedOut = document.getElementById('loggedOutActions');
+            const loggedIn = document.getElementById('loggedInActions');
+            const headerLogin = document.getElementById('headerPatientLogin');
+
+            if (user && App.isAuthenticated()) {
+                if (loggedOut) loggedOut.style.display = 'none';
+                if (loggedIn) loggedIn.style.display = 'block';
+                if (headerLogin) headerLogin.style.display = 'none';
+
+                const welcomeUser = document.getElementById('welcomeUser');
+                if (welcomeUser) welcomeUser.textContent = `Hi, ${user.name.split(' ')[0]}!`;
+
+                const avatar = document.getElementById('userAvatar');
+                if (avatar && user.name) {
+                    avatar.textContent = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                }
+
+                const idDisplay = document.getElementById('patientIdDisplay');
+                if (idDisplay) {
+                    idDisplay.style.display = 'block';
+                    idDisplay.textContent = `ID: ${user.id}`;
+                }
+            } else {
+                if (loggedOut) loggedOut.style.display = 'block';
+                if (loggedIn) loggedIn.style.display = 'none';
+                if (headerLogin) headerLogin.style.display = 'block';
+                const idDisplay = document.getElementById('patientIdDisplay');
+                if (idDisplay) idDisplay.style.display = 'none';
+                document.getElementById('userAvatar').textContent = '👤';
+            }
+        });
+    </script>
+</body>
+
+</html>

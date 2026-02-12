@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Sentini Hospital</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="text-decoration: none;">
+                <div class="logo-section">
+                    <div class="logo-plus">+</div>
+                    <h2 style="font-weight: 800; color: var(--text-main);">Sentini Booking</h2>
+                </div>
+            </a>
+            <div class="nav-right" style="display: flex; align-items: center; gap: 1rem;">
+                <a href="patient-login.html" id="headerPatientLogin"
+                    style="color: var(--primary-blue); text-decoration: none; font-size: 0.9rem; font-weight: 700; background: rgba(59, 130, 246, 0.1); padding: 0.5rem 1rem; border-radius: 8px;">Patient
+                    Login</a>
+                <a href="admin-login.html"
+                    style="color: var(--text-sub); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Admin
+                    Access</a>
+            </div>
+        </header>
+
+        <div id="authWarning"
+            style="display: none; background: #fef2f2; color: #b91c1c; padding: 1.2rem; border-radius: 16px; margin-bottom: 2rem; text-align: center; font-weight: 600; border: 1px solid #fee2e2;">
+            Please register first to book an appointment. Redirecting to Register page…
+        </div>
+
+        <main id="bookingContent" style="display: flex; justify-content: center; padding: 2rem 0;">
+            <!-- Single Clean Booking Form -->
+            <section class="glass-pane" style="width: 100%; max-width: 600px;">
+                <h3 style="margin-bottom: 2rem; font-weight: 800; text-align: center;">Book Your Appointment</h3>
+                <form id="bookingForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Full Name</label>
+                        <input type="text" id="pFullName" placeholder="Your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" id="pAge" placeholder="Your age" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="pGender" required>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="pEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="pPhone" placeholder="Phone number" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <select id="pDept" required>
+                            <option value="">Select Department</option>
+                            <option value="General Medicine">General Medicine</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Neurology">Neurology</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                            <option value="Dermatology">Dermatology</option>
+                            <option value="ENT">ENT</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Appointment Date</label>
+                        <input type="date" id="pDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Appointment Time</label>
+                        <input type="time" id="pTime" required>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Reason for Visit</label>
+                        <textarea id="pReason" rows="3" placeholder="Briefly describe your symptoms"
+                            required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                        style="grid-column: span 2; margin-top: 1rem; padding: 1.2rem;">Confirm Appointment</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (App.isAuthenticated()) {
+                const headerLogin = document.getElementById('headerPatientLogin');
+                if (headerLogin) headerLogin.style.display = 'none';
+            }
+
+            if (!App.isAuthenticated()) {
+                document.getElementById('bookingContent').style.display = 'none';
+                document.getElementById('authWarning').style.display = 'block';
+                setTimeout(() => {
+                    window.location.href = 'patient-register.html?redirect=booking.html';
+                }, 2000);
+                return;
+            }
+
+            // Set min date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('pDate').setAttribute('min', today);
+
+            // Prefill user data if available
+            const user = App.getUser();
+            if (user) {
+                document.getElementById('pFullName').value = user.name || '';
+                document.getElementById('pEmail').value = user.email || '';
+            }
+        });
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const body = {
+                fullName: document.getElementById('pFullName').value,
+                age: parseInt(document.getElementById('pAge').value),
+                email: document.getElementById('pEmail').value,
+                phone: document.getElementById('pPhone').value,
+                gender: document.getElementById('pGender').value,
+                department: document.getElementById('pDept').value,
+                appointmentDate: document.getElementById('pDate').value,
+                appointmentTime: document.getElementById('pTime').value,
+                reason: document.getElementById('pReason').value,
+                // Passing a placeholder slotId if backend strictly requires it, 
+                // but usually the backend should handle date-based booking now.
+                // Keeping logic minimal as requested.
+                slotId: 0
+            };
+
+            const resp = await fetch(`${App.getApiUrl()}/appointments/book`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${App.getToken()}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (resp.ok) {
+                App.notify('Appointment request submitted! Your status is currently Pending.', 'success');
+                setTimeout(() => window.location.href = 'patient-dashboard.html', 1500);
+            } else {
+                const data = await resp.json();
+                App.notify(data.message || 'Booking failed', 'error');
+            }
+        });
+    </script>
+</body>
+
+</html>

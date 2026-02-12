@@ -1,0 +1,6 @@
+Testing Registration...
+Reg Response: { message: 'User registered successfully' }
+Testing Login...
+TypeError: Cannot read properties of undefined (reading 'email')
+    at test (file:///D:/sentini_hos/test-api.js:26:37)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Sentini Hospital</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-section">
+                <div class="logo-plus">+</div>
+                <div>
+                    <h2 style="font-weight: 800; color: var(--text-main);">Sentini Admin</h2>
+                    <p style="font-size: var(--fs-sm); color: var(--text-sub); font-weight: 600;">Staff Management
+                        Console</p>
+                </div>
+            </div>
+            <button onclick="App.logout()" class="btn-outline"
+                style="padding: 0.6rem 1.5rem; border-radius: 12px; font-weight: 700;">Logout</button>
+        </header>
+
+        <div class="hero-section admin-layout"
+            style="gap: 2.5rem; min-height: auto; margin-top: 1rem; align-items: flex-start;">
+            <!-- Left: Slot Management -->
+            <aside class="admin-sidebar" style="display: flex; flex-direction: column; gap: 2rem; flex-shrink: 0;">
+                <div class="glass-pane">
+                    <h3 style="margin-bottom: 2rem; font-weight: 800;">Create Time Slot</h3>
+                    <form id="slotForm">
+                        <div class="form-group">
+                            <label>Doctor Name</label>
+                            <input type="text" id="slotDoctor" placeholder="e.g. Stephen Strange" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Specialization (Department)</label>
+                            <select id="slotDept" required>
+                                <option value="General Medicine">General Medicine</option>
+                                <option value="Cardiology">Cardiology</option>
+                                <option value="Orthopedics">Orthopedics</option>
+                                <option value="Pediatrics">Pediatrics</option>
+                                <option value="Neurology">Neurology</option>
+                                <option value="Dermatology">Dermatology</option>
+                                <option value="ENT">ENT</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="slotDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Time</label>
+                            <input type="time" id="slotTime" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full mt-1">Create Available Slot</button>
+                    </form>
+                </div>
+
+                <div class="glass-pane" style="flex: 1;">
+                    <h3 style="margin-bottom: 1.5rem; font-weight: 800;">Active Slots</h3>
+                    <div id="slotsList" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right: Appointments Management -->
+            <main class="glass-pane admin-main" style="flex: 1; width: 100%;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                    <h3 style="font-weight: 800;">Manage Appointments</h3>
+                    <div
+                        style="background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub);">
+                        Real-time Monitoring Active
+                    </div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Specialization</th>
+                                <th>Date & Time</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTable">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let availableSlots = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!App.isAuthenticated() || App.getUser().role !== 'admin') {
+                window.location.href = 'admin-login.html';
+                return;
+            }
+            loadBaseData();
+
+            // Setup real-time monitoring for Admins
+            if (App.socket) {
+                App.socket.on('newAppointment', (data) => {
+                    App.showNotification(`New Appointment: ${data.fullName} for ${data.department}`);
+                    loadAdminAppointments();
+                });
+            }
+        });
+
+        async function loadBaseData() {
+            await Promise.all([
+                loadAdminSlots(),
+                loadAdminAppointments()
+            ]);
+        }
+
+        async function loadAdminSlots() {
+            const resp = await fetch(`${App.getApiUrl()}/appointments/slots`);
+            const data = await resp.json();
+            availableSlots = data; // Store globally for dropdowns
+
+            const list = document.getElementById('slotsList');
+
+            if (data.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--text-sub); padding: 1rem;">No slots found.</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(slot => `
+                <div style="background: rgba(255,255,255,0.5); padding: 1rem; border-radius: 12px; margin-bottom: 0.8rem; border: 1px solid rgba(255,255,255,0.8); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-main);">Dr. ${slot.doctorName}</div>
+                        <div style="font-size: 0.75rem; color: var(--primary-blue); font-weight: 700;">${slot.department}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-sub); margin-top: 0.2rem;">${slot.date} @ ${slot.time}</div>
+                    </div>
+                    <button onclick="deleteSlot(${slot.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; padding: 0.5rem;" title="Delete Slot">×</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteSlot(id) {
+            const confirmed = await App.confirm('Delete Slot', 'Are you sure you want to remove this available time slot?');
+            if (!confirmed) return;
+
+            const resp = await fetch(`${App.getApiUrl()}/appointments/slots/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${App.getToken()}` }
+            });
+            if (resp.ok) {
+                App.notify('Slot removed successfully', 'success');
+                loadBaseData();
+            } else {
+                App.notify('Failed to remove slot', 'error');
+            }
+        }
+
+        async function loadAdminAppointments() {
+            const resp = await fetch(`${App.getApiUrl()}/appointments/all`, {
+                headers: { 'Authorization': `Bearer ${App.getToken()}` }
+            });
+            const data = await resp.json();
+            const tbody = document.getElementById('adminTable');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sub); padding: 3rem; font-weight: 500;">No appointment requests found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(app => {
+                const isPending = app.status === 'pending';
+
+                // Filter slots by department if available
+                const matchingSlots = availableSlots.filter(s => s.department === app.department);
+
+                const slotSelect = isPending ? `
+                    <select id="slotSelect-${app.id}" style="font-size: 0.75rem; padding: 0.3rem; border-radius: 8px; margin-bottom: 0.5rem; width: 100%;">
+                        <option value="">Select Slot (Opt)</option>
+                        ${matchingSlots.map(s => `
+                            <option value="${s.id}">Dr. ${s.doctorName} (${s.date} ${s.time})</option>
+                        `).join('')}
+                    </select>
+                ` : '';
+
+                return `
+                <tr>
+                    <td data-label="Patient">
+                        <div style="font-weight: 700; color: var(--text-main);">${app.fullName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: 500;">Age: ${app.age} | ${app.gender}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-sub);">${app.email}</div>
+                    </td>
+                    <td data-label="Specialization">
+                        <div style="font-weight: 700; color: var(--text-main);">${app.department}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: 600;">${app.doctorName ? 'Dr. ' + app.doctorName : 'Pending Assignment'}</div>
+                    </td>
+                    <td data-label="Date & Time" style="font-weight: 600; color: var(--text-main);">
+                        <div style="font-size: 0.95rem;">${app.appointmentDate || '---'}</div>
+                        <div style="font-size: 0.85rem; color: var(--primary-blue); font-weight: 700; margin-top: 0.2rem;">${app.appointmentTime || 'Flexible'}</div>
+                    </td>
+                    <td data-label="Status"><span class="status-badge status-${app.status}">${app.status}</span></td>
+                    <td data-label="Action">
+                        ${isPending ? `
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem; min-width: 120px;">
+                                ${slotSelect}
+                                <div style="display: flex; gap: 0.4rem;">
+                                    <button onclick="updateStatus(${app.id}, 'approved')" class="btn-primary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; font-weight: 700; flex: 1;">Approve</button>
+                                    <button onclick="updateStatus(${app.id}, 'rejected')" class="btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; color: #EF4444; font-weight: 700; flex: 1;">Reject</button>
+                                </div>
+                            </div>
+                        ` : '<span style="color: var(--text-sub); font-size: 0.8rem; font-weight: 600;">Processed</span>'}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        async function updateStatus(id, status) {
+            const confirmed = await App.confirm(
+                status === 'approved' ? 'Approve Appointment' : 'Reject Appointment',
+                `Are you sure you want to ${status} this request?`
+            );
+            if (!confirmed) return;
+
+            let slotId = null;
+            if (status === 'approved') {
+                const select = document.getElementById(`slotSelect-${id}`);
+                if (select && select.value) {
+                    slotId = parseInt(select.value);
+                }
+            }
+
+            const resp = await fetch(`${App.getApiUrl()}/appointments/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${App.getToken()}`
+                },
+                body: JSON.stringify({ status, slotId })
+            });
+
+            if (resp.ok) {
+                App.notify(`Appointment ${status} successfully`, 'success');
+                loadBaseData();
+            } else {
+                App.notify('Failed to update status', 'error');
+            }
+        }
+
+        document.getElementById('slotForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                doctorName: document.getElementById('slotDoctor').value,
+                department: document.getElementById('slotDept').value,
+                date: document.getElementById('slotDate').value,
+                time: document.getElementById('slotTime').value
+            };
+
+            const resp = await fetch(`${App.getApiUrl()}/appointments/slots`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${App.getToken()}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (resp.ok) {
+                App.notify('Success: New time slot created!', 'success');
+                e.target.reset();
+                loadAdminSlots();
+            } else {
+                const errorData = await resp.json().catch(() => ({}));
+                App.notify(errorData.message || 'Failed to create slot', 'error');
+                if (errorData.error) console.error('Create slot error:', errorData.error);
+            }
+        });
+    </script>
+</body>
+
+</html>
