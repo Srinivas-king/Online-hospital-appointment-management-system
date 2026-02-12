@@ -26,7 +26,8 @@ JWT_SECRET=your_jwt_secret
 ### 3. Installation
 ```bash
 # Clone the repository
-cd sentini_hos
+git clone https://github.com/Srinivas-king/Online-hospital-appointment-management-system.git
+cd Online-hospital-appointment-management-system
 
 # Install dependencies
 npm install
