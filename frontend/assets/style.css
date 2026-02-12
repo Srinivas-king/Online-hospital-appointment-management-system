@@ -618,6 +618,11 @@ tr td {
     color: #b91c1c;
 }
 
+.status-completed {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
 /* Notification System */
 .notifications-container {
     position: fixed;

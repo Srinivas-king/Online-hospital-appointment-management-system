@@ -68,39 +68,90 @@
                 </div>
             </aside>
 
-            <!-- Right: Appointments Management -->
-            <main class="glass-pane admin-main" style="flex: 1; width: 100%;">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-                    <h3 style="font-weight: 800;">Manage Appointments</h3>
+            <!-- Right: Content Area -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 2rem; min-width: 0;">
+                <!-- Active Appointments -->
+                <main class="glass-pane admin-main" style="width: 100%;">
                     <div
-                        style="background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub);">
-                        Real-time Monitoring Active
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                        <h3 style="font-weight: 800;">Manage Appointments</h3>
+                        <div
+                            style="background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub);">
+                            Real-time Monitoring Active
+                        </div>
                     </div>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Specialization</th>
-                                <th>Date & Time</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTable">
-                            <!-- Loaded dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </main>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Specialization</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTable">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination for Active -->
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
+                        <button onclick="changeActivePage(-1)" id="activePrev" class="btn-outline"
+                            style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">Previous</button>
+                        <span id="activePageDisplay"
+                            style="font-weight: 700; color: var(--text-sub); font-size: 0.9rem;">Page 1</span>
+                        <button onclick="changeActivePage(1)" id="activeNext" class="btn-outline"
+                            style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">Next</button>
+                    </div>
+                </main>
+
+                <!-- Completed Appointments -->
+                <section class="glass-pane admin-main" style="width: 100%;">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-weight: 800;">Completed Appointments</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-sub); margin-top: 0.3rem;">History of all
+                            processed consultations</p>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Specialization</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedTable">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination for Completed -->
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
+                        <button onclick="changeCompletedPage(-1)" id="completedPrev" class="btn-outline"
+                            style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">Previous</button>
+                        <span id="completedPageDisplay"
+                            style="font-weight: 700; color: var(--text-sub); font-size: 0.9rem;">Page 1</span>
+                        <button onclick="changeCompletedPage(1)" id="completedNext" class="btn-outline"
+                            style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">Next</button>
+                    </div>
+                </section>
+            </div>
         </div>
     </div>
 
     <script src="app.js"></script>
     <script>
         let availableSlots = [];
+        let activePage = 1;
+        let completedPage = 1;
+        const limit = 5;
 
         window.addEventListener('DOMContentLoaded', () => {
             if (!App.isAuthenticated() || App.getUser().role !== 'admin') {
@@ -121,7 +172,8 @@
         async function loadBaseData() {
             await Promise.all([
                 loadAdminSlots(),
-                loadAdminAppointments()
+                loadAdminAppointments(),
+                loadCompletedAppointments()
             ]);
         }
 
@@ -165,14 +217,32 @@
             }
         }
 
+        async function changeActivePage(dir) {
+            if (activePage + dir < 1) return;
+            activePage += dir;
+            await loadAdminAppointments();
+            document.getElementById('activePageDisplay').textContent = `Page ${activePage}`;
+        }
+
+        async function changeCompletedPage(dir) {
+            if (completedPage + dir < 1) return;
+            completedPage += dir;
+            await loadCompletedAppointments();
+            document.getElementById('completedPageDisplay').textContent = `Page ${completedPage}`;
+        }
+
         async function loadAdminAppointments() {
-            const resp = await fetch(`${App.getApiUrl()}/appointments/all`, {
+            const resp = await fetch(`${App.getApiUrl()}/appointments/all?page=${activePage}&limit=${limit}`, {
                 headers: { 'Authorization': `Bearer ${App.getToken()}` }
             });
             const data = await resp.json();
             const tbody = document.getElementById('adminTable');
 
-            if (data.length === 0) {
+            // Handle pagination button states
+            document.getElementById('activePrev').disabled = activePage === 1;
+            document.getElementById('activeNext').disabled = data.length < limit;
+
+            if (data.length === 0 && activePage === 1) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sub); padding: 3rem; font-weight: 500;">No appointment requests found.</td></tr>';
                 return;
             }
@@ -209,7 +279,7 @@
                     </td>
                     <td data-label="Status"><span class="status-badge status-${app.status}">${app.status}</span></td>
                     <td data-label="Action">
-                        ${isPending ? `
+                        ${app.status === 'pending' ? `
                             <div style="display: flex; flex-direction: column; gap: 0.3rem; min-width: 120px;">
                                 ${slotSelect}
                                 <div style="display: flex; gap: 0.4rem;">
@@ -217,16 +287,57 @@
                                     <button onclick="updateStatus(${app.id}, 'rejected')" class="btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; color: #EF4444; font-weight: 700; flex: 1;">Reject</button>
                                 </div>
                             </div>
-                        ` : '<span style="color: var(--text-sub); font-size: 0.8rem; font-weight: 600;">Processed</span>'}
+                        ` : app.status === 'approved' ? `
+                            <button onclick="updateStatus(${app.id}, 'completed')" class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; font-weight: 700; width: 100%;">Mark Complete</button>
+                        ` : `<span style="color: var(--text-sub); font-size: 0.8rem; font-weight: 600;">${app.status.toUpperCase()}</span>`}
                     </td>
                 </tr>
             `}).join('');
         }
 
+        async function loadCompletedAppointments() {
+            const resp = await fetch(`${App.getApiUrl()}/appointments/completed?page=${completedPage}&limit=${limit}`, {
+                headers: { 'Authorization': `Bearer ${App.getToken()}` }
+            });
+            const data = await resp.json();
+            const tbody = document.getElementById('completedTable');
+
+            document.getElementById('completedPrev').disabled = completedPage === 1;
+            document.getElementById('completedNext').disabled = data.length < limit;
+
+            if (data.length === 0 && completedPage === 1) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-sub); padding: 3rem; font-weight: 500;">No completed appointments history.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(app => `
+                <tr>
+                    <td data-label="Patient">
+                        <div style="font-weight: 700; color: var(--text-main);">${app.fullName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: 500;">Age: ${app.age} | ${app.gender}</div>
+                    </td>
+                    <td data-label="Specialization">
+                        <div style="font-weight: 700; color: var(--text-main);">${app.department}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: 600;">Dr. ${app.doctorName || 'TBD'}</div>
+                    </td>
+                    <td data-label="Date & Time" style="font-weight: 600; color: var(--text-main);">
+                        <div style="font-size: 0.95rem;">${app.appointmentDate || '---'}</div>
+                        <div style="font-size: 0.85rem; color: var(--primary-blue); font-weight: 700; margin-top: 0.2rem;">${app.appointmentTime || 'Flexible'}</div>
+                    </td>
+                    <td data-label="Status"><span class="status-badge status-completed">${app.status}</span></td>
+                    <td data-label="Details">
+                        <span style="color: var(--text-sub); font-size: 0.8rem; font-weight: 600;">HISTORY RECORD</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
         async function updateStatus(id, status) {
+            const title = status === 'approved' ? 'Approve Appointment' :
+                status === 'completed' ? 'Mark as Completed' : 'Reject Appointment';
             const confirmed = await App.confirm(
-                status === 'approved' ? 'Approve Appointment' : 'Reject Appointment',
-                `Are you sure you want to ${status} this request?`
+                title,
+                `Are you sure you want to set this appointment as ${status}?`
             );
             if (!confirmed) return;
 

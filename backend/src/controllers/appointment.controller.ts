@@ -1,8 +1,51 @@
 import { Request, Response } from 'express';
 import { db, schema } from '../db/index.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne, lt, or, isNull, desc } from 'drizzle-orm';
 import { notifyAppointmentStatus, notifyAppointmentBooking } from '../services/mail.service.js';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
+
+// Helper to automatically mark passed appointments as completed
+const autoCompletePassedAppointments = async () => {
+    try {
+        // Use local date in YYYY-MM-DD format for comparison
+        const today = new Date().toLocaleDateString('en-CA');
+
+        const passed = await db.select({
+            id: schema.appointments.id,
+            slotId: schema.appointments.slotId
+        })
+            .from(schema.appointments)
+            .leftJoin(schema.slots, eq(schema.appointments.slotId, schema.slots.id))
+            .where(
+                and(
+                    eq(schema.appointments.status, 'approved'),
+                    or(
+                        lt(schema.slots.date, today),
+                        and(
+                            isNull(schema.appointments.slotId),
+                            lt(schema.appointments.appointmentDate, today)
+                        )
+                    )
+                )
+            );
+
+        for (const app of passed) {
+            await db.transaction(async (tx) => {
+                await tx.update(schema.appointments)
+                    .set({ status: 'completed' })
+                    .where(eq(schema.appointments.id, app.id));
+
+                if (app.slotId) {
+                    await tx.update(schema.slots)
+                        .set({ isAvailable: true })
+                        .where(eq(schema.slots.id, app.slotId));
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Auto-complete error:', error);
+    }
+};
 
 export const getAvailableSlots = async (req: Request, res: Response) => {
     try {
@@ -125,13 +168,22 @@ export const getPatientAppointments = async (req: AuthRequest, res: Response) =>
 
 export const getAllAppointments = async (req: AuthRequest, res: Response) => {
     try {
+        await autoCompletePassedAppointments();
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 5;
+        const offset = (page - 1) * limit;
+
         const appointments = await db.select()
             .from(schema.appointments)
-            .leftJoin(schema.slots, eq(schema.appointments.slotId, schema.slots.id));
+            .leftJoin(schema.slots, eq(schema.appointments.slotId, schema.slots.id))
+            .where(ne(schema.appointments.status, 'completed'))
+            .limit(limit)
+            .offset(offset)
+            .orderBy(desc(schema.appointments.id));
 
         res.json(appointments.map(app => ({
             ...app.appointments,
-            // Use slot data if available, otherwise original appointment data
             doctorName: app.slots?.doctorName,
             appointmentDate: app.slots?.date || app.appointments.appointmentDate,
             appointmentTime: app.slots?.time || app.appointments.appointmentTime || 'Flexible',
@@ -139,6 +191,36 @@ export const getAllAppointments = async (req: AuthRequest, res: Response) => {
         })));
     } catch (error: any) {
         console.error('Error fetching all appointments:', error);
+        res.status(500).json({ message: 'Error fetching appointments' });
+    }
+};
+
+export const getCompletedAppointments = async (req: AuthRequest, res: Response) => {
+    try {
+        // Sync passed appointments before fetching
+        await autoCompletePassedAppointments();
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 5;
+        const offset = (page - 1) * limit;
+
+        const appointments = await db.select()
+            .from(schema.appointments)
+            .leftJoin(schema.slots, eq(schema.appointments.slotId, schema.slots.id))
+            .where(eq(schema.appointments.status, 'completed'))
+            .limit(limit)
+            .offset(offset)
+            .orderBy(desc(schema.appointments.id));
+
+        res.json(appointments.map(app => ({
+            ...app.appointments,
+            doctorName: app.slots?.doctorName,
+            appointmentDate: app.slots?.date || app.appointments.appointmentDate,
+            appointmentTime: app.slots?.time || app.appointments.appointmentTime || 'Flexible',
+            name: app.appointments.fullName
+        })));
+    } catch (error: any) {
+        console.error('Error fetching completed appointments:', error);
         res.status(500).json({ message: 'Error fetching appointments' });
     }
 };
@@ -179,9 +261,18 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
                     .where(eq(schema.appointments.id, parseInt(id)));
             }
         } else {
-            await db.update(schema.appointments)
-                .set({ status })
-                .where(eq(schema.appointments.id, parseInt(id)));
+            await db.transaction(async (tx) => {
+                await tx.update(schema.appointments)
+                    .set({ status })
+                    .where(eq(schema.appointments.id, parseInt(id)));
+
+                // If marked as completed or rejected, free the slot
+                if ((status === 'completed' || status === 'rejected') && app.slotId) {
+                    await tx.update(schema.slots)
+                        .set({ isAvailable: true })
+                        .where(eq(schema.slots.id, app.slotId));
+                }
+            });
         }
 
         // Real-time update via Socket.io

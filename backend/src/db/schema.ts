@@ -35,6 +35,6 @@ export const appointments = mysqlTable('appointments', {
     appointmentTime: varchar('appointment_time', { length: 50 }),
     reason: text('reason').notNull(),
 
-    status: varchar('status', { length: 50 }).default('pending').notNull(), // pending, approved, rejected
+    status: varchar('status', { length: 50 }).default('pending').notNull(), // pending, approved, rejected, completed
     createdAt: timestamp('created_at').defaultNow(),
 });
